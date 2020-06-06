@@ -2,145 +2,144 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<title>Supertopiyo</title>
-		<script
-			  src="https://code.jquery.com/jquery-3.5.1.min.js"
-			  integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
-			  crossorigin="anonymous"></script>
+		<title>tanteos - mapa wikipedia</title>
 		
 		<script src="https://d3js.org/d3.v5.min.js"></script>
 		<style type="text/css" media="screen">
 
-				.circle text {
- 					 font: 13px helvetica;
- 					 color: white;
- 					 text-align: center;
-									}
-				.node text {
- 					 font: 13px helvetica;
- 					 color: white;
-					 text-align: center; }			}
+				text {
+					text-anchor: middle;
+					color: white;
+					font-size: 1.5em;
+					}
 
+				p {
+					display: inline-block;
+				}
+
+				a {
+					text-decoration-line: none;
+				}
+				svg {
+					z-index: -1;
+					position: absolute;
+				}	 
+
+				input {
+					background-color: #442277	;
+					border-style: solid;
+					border-width: 1px; 
+					border-radius: 5px;
+					border-color: #221144;
+					height: 25px;
+					color: white;
+
+				} 
+				::placeholder {
+					color: white;
+
+				}
+
+
+		
 	     </style>
 
 	</head>
 
-	<body style="text-align: center; background-color:black;">
+	<body style="background-color:#214;">
 
-		<p></p>
+		<div style="color: white; text-align: right; margin-left: 4%;  display: inline-block; float: right">
+			 
+			<a href="https://observablehq.com/@d3/force-directed-graph" style="color:white; margin-right: 20px">
+			 > d3.js force-directed graph layout 
+			</a>
+			 
+			 <a href="https://github.com/controversial/wikipedia-map" style="color:white; margin-right: 20px"> 
+			  > idea & wikipedia API parser
+			 </a>
 
+			  <input id="quebuskar" placeholder="Titulo articulo"></input>
+		</div>
+
+
+		<script src="wikipedia_parse.js"></script>
 
 		<script type="text/javascript">
-			
-		/*		const domParser = new DOMParser();
 
-			
-
-			var el = fetch("https://www.elmostrador.cl/").then(res => domParser.parseFromString(res.parse.text['*'], 'text/html'));
-		*/
-		</script>
-
-		<script type="text/javascript">
 				
-				var dataset;
-				
-				var w = 1000;
-				var h = 800;
+			var w = window.innerWidth;
+			var h = window.innerHeight;
+			
+			var grafo = { nodes:[],links:[]};
+			
+			var color = d3.scaleOrdinal(d3.schemeTableau10);
 
-
-				d3.json("/data.json").then(function(jason) {
-					console.log(jason); //Log output to console
-					dataset = jason;
-									
-					const links = dataset.links.map(d => Object.create(d));
-  					const nodos = dataset.nodes.map(d => Object.create(d));
-
-  					console.log(nodos)
-
-					const force = d3.forceSimulation(nodos)
-					      .force("link", d3.forceLink(links).id(d => d.id).distance(100))
-					      .force("charge", d3.forceManyBody().strength(-50))
-					      .force("center", d3.forceCenter(w / 2, h / 2));
-
-					var colors = d3.scaleOrdinal(d3.schemeSet3);
-
-					//Create SVG element
-					var svg = d3.select("body")
+			var svg = d3.select("body")
 								.append("svg")
 								.attr("width", w)
 								.attr("height", h)
-								.style("font", "12px sans-serif");
-					
-					
-					 svg.call(d3.zoom()
-						      .extent([[0, 0], [w, h]])
-						      .scaleExtent([1, 8])
-						      .on("zoom", zoomed));
-
-					//Create edges as lines
-					var edges = svg.selectAll("line")
-						.data(links)
-						.enter()
-						.append("line")
-						.style("stroke", "#444")
-						.style("stroke-width", 1);
-					
-					
-					var node = svg.selectAll(".node")
-					    .data(nodos)
-					    .enter().append("g")
-					    .attr("class", "node")
-					    .attr("cursor", "grab")
-					    .call(d3.drag()  //Define what to do on drag events
-							.on("start", dragStarted)
-							.on("drag", dragging)
-							.on("end", dragEnded));   ;
-					   
+								.style("font", "12px sans-serif");	
 			
+			const apendarNodo = (nuevoNodo) => {
+				
+				if (!(grafo.nodes.map(node => node.id.toLowerCase()).includes(nuevoNodo.toLowerCase()))){
+					grafo.nodes.push({id:nuevoNodo});
+				}
+				
+			}
 
+			
+			function apendarVinculo(desde, nuevoNodo){
+				
+				let binculos = grafo.links.map( l => (l.source+l.target).toLowerCase() );
+				let binculo = (desde+nuevoNodo).toLowerCase();
 
-					node.append("text")
-					  .attr("x", 10)
-					      .attr("y", 1)
-					      .text(d => d.id)
-					    .clone(true).lower()
-					      .attr("fill", "")
-					      .attr("stroke", function(d, i) {
-							return colors(i);
-						})
-					      .attr("stroke-width", 6);
+				if (!(binculos.includes(binculo))){
+					grafo.links.push({source:desde,target:nuevoNodo});
+				}
+			}
+				
 
+	
 
+			d3.select("#quebuskar").on("change", function(){
 
+				grafo = { nodes:[],links:[]};
 
+				let busqueda = d3.select("#quebuskar").property("value");
+				grafo.nodes.push({id:busqueda});
+				getPageHtml(busqueda.replace(" ", "_"))
+				.then(x => getFirstParagraph(x))
+				.then(x=> getWikiLinks(x))
+				.then( vinculos => vinculos.forEach( function(vinculo){
+				 apendarNodo(vinculo.toLowerCase());
+				 apendarVinculo(busqueda.toLowerCase(), vinculo.toLowerCase());
+				}))
+				.then( update(grafo) )
 
-					function zoomed() {
-						    edges.attr("transform", d3.event.transform);
-						    node.attr("transform", d3.event.transform);
+			});
+
+		
+
+				function zoomed() {
+						    d3.selectAll("g").attr("transform", d3.event.transform);
+						  	 d3.selectAll("line").attr("transform", d3.event.transform);
 						  }
 
-
-
+				
 			
+
+
+				
+					
+
+					
 					
 					//Every time the simulation "ticks", this will be called
-					force.on("tick", function() {
+				
 
-						edges.attr("x1", function(d) { return d.source.x; })
-							 .attr("y1", function(d) { return d.source.y; })
-							 .attr("x2", function(d) { return d.target.x; })
-							 .attr("y2", function(d) { return d.target.y; });
-					
-						d3.selectAll("circle").attr("cx", function(d) { return d.x; })
-							 .attr("cy", function(d) { return d.y; });
-						d3.selectAll("text").attr("x", function(d) { return d.x - 15; })
-							 .attr("y", function(d) { return d.y; });
-			
-					});
-
-								//Define drag event functions
-					function dragStarted(d) {
-						if (!d3.event.active) force.alphaTarget(0.3).restart();
+						function dragStarted(d) {
+						if (!d3.event.active) simulation.alphaTarget(0.3).restart();
 						d.fx = d.x;
 						d.fy = d.y;
 					}
@@ -151,17 +150,130 @@
 					}
 
 					function dragEnded(d) {
-						if (!d3.event.active) force.alphaTarget(0);
+						if (!d3.event.active) simulation.alphaTarget(0);
 						d.fx = null;
 						d.fy = null;
 					}
-
-
-
-
-				});
 		
+
+
+
+					
+
+
+					function nodeclick(d){
+					  console.log(d.id);
+					  getPageHtml(decodeURI(d.id))
+						.then(html => getFirstParagraph( html ))
+						.then(paragraph => getWikiLinks( paragraph ))
+						.then( vinculos => vinculos.forEach( function(vinculo){
+						 apendarNodo(vinculo.toLowerCase())
+						 apendarVinculo(d.id, vinculo.toLowerCase()) 
+						 }))
+						.then( update(grafo) )
+						.catch(err => console.log(err))
+						}
 				
+const simulation = d3.forceSimulation()
+      .force("charge", d3.forceManyBody().strength(-1000))
+      .force("link", d3.forceLink().id(d => d.id).distance(100))
+      .force("x", d3.forceX())
+      .force("y", d3.forceY())
+      .force("center", d3.forceCenter(w / 2, h / 2))
+      .on("tick", ticked);
+
+  let link = svg.append("g")
+      .attr("stroke", "#666")
+      .attr("stroke-width", 1.5)
+    .selectAll("line");
+
+  
+  let node = svg.append("g")
+        .selectAll("circle");
+
+    let text = svg.append("g")     
+    .selectAll("text");
+
+
+  function ticked() {
+    node.attr("cx", d => d.x)
+        .attr("cy", d => d.y);
+
+    text.attr("x", d=>d.x)
+    	.attr("y", d=>d.y + 40);
+
+    link.attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+  }
+
+  // Terminate the force layout when this cell re-runs.
+//  invalidation.then(() => simulation.stop());
+  function update({nodes,links}) {
+
+
+      // Make a shallow copy to protect against mutation, while
+      // recycling old nodes to preserve position and velocity.
+      const old = new Map(node.data().map(d => [d.id, d]));
+      nodes = nodes.map(d => Object.assign(old.get(d.id) || {}, d));
+      links = links.map(d => Object.assign({}, d));
+
+      node = node
+        .data(nodes, d => d.id)
+        .join(enter => enter.append("circle")
+          .attr("r", 18)
+          .attr("fill", d => color(d.id)))
+     
+        	 .attr("class", "node")
+					    .attr("cursor", "grab")
+					    .call(d3.drag()  //Define what to do on drag events
+							.on("start", dragStarted)
+							.on("drag", dragging)
+							.on("end", dragEnded));   
+      text = text 
+      		.data(nodes, d => d.id)
+      		.join(enter => enter.append("text")
+      			.attr("fill", "white")
+      			.attr("href", d => 'https://es.wikipedia.org/wiki/' + d.id + '"></a>')
+      			.text(d => decodeURI(d.id)))
+      				 .attr("class", "node")
+					    .attr("cursor", "pointer")
+					    .call(d3.drag()  //Define what to do on drag events
+							.on("start", dragStarted)
+							.on("drag", dragging)
+							.on("end", dragEnded));   
+
+
+      link = link
+        .data(links, d => [d.source, d.target])
+        .join("line")
+         .call(d3.drag()  //Define what to do on drag events
+							.on("start", dragStarted)
+							.on("drag", dragging)
+							.on("end", dragEnded));   	
+
+      simulation.nodes(nodes);
+      simulation.force("link").links(links);
+      simulation.alpha(1).restart();
+    
+
+
+	node.on("click", d => nodeclick(d));
+	
+
+	node.on("dblclick",function(d){ console.log("https://es.wikipedia.org/wiki/" + d.id) });
+
+ 
+
+    }
+
+
+      	svg.call(d3.zoom()
+						      .extent([[0, 0], [w, h]])
+						      .scaleExtent([1, 8])
+						      .on("zoom", zoomed)); 
+			
 			
 		</script>
 
