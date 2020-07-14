@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 	<head>
 		<meta charset="utf-8">
 		<title>tanteos - mapa wikipedia</title>
@@ -108,7 +108,7 @@
 
 				let busqueda = d3.select("#quebuskar").property("value");
 				grafo.nodes.push({id:busqueda});
-				getPageHtml(busqueda.replace(" ", "_"))
+				getPageHtml(decodeURI(busqueda))
 				.then(x => getFirstParagraph(x))
 				.then(x=> getWikiLinks(x))
 				.then( vinculos => vinculos.forEach( function(vinculo){
@@ -121,78 +121,62 @@
 
 		
 
-				function zoomed() {
-						    d3.selectAll("g").attr("transform", d3.event.transform);
-						  	 d3.selectAll("line").attr("transform", d3.event.transform);
-						  }
-
+			function zoomed() {
+			   d3.selectAll("g").attr("transform", d3.event.transform);
+			 //  d3.selectAll("line").attr("transform", d3.event.transform);
+			}
 				
-			
+			function dragStarted(d) {
+				if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+				d.fx = d.x;
+				d.fy = d.y;
+			}
 
+			function dragging(d) {
+				d.fx = d3.event.x;
+				d.fy = d3.event.y;
+			}
 
-				
-					
-
-					
-					
-					//Every time the simulation "ticks", this will be called
-				
-
-						function dragStarted(d) {
-						if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-						d.fx = d.x;
-						d.fy = d.y;
-					}
-
-					function dragging(d) {
-						d.fx = d3.event.x;
-						d.fy = d3.event.y;
-					}
-
-					function dragEnded(d) {
-						if (!d3.event.active) simulation.alphaTarget(0);
-						d.fx = null;
-						d.fy = null;
-					}
+			function dragEnded(d) {
+				if (!d3.event.active) simulation.alphaTarget(0);
+				d.fx = null;
+				d.fy = null;
+			}
 		
-
-
-
-					
-
-
-					function nodeclick(d){
-					  console.log(d.id);
-					  getPageHtml(decodeURI(d.id))
-						.then(html => getFirstParagraph( html ))
-						.then(paragraph => getWikiLinks( paragraph ))
-						.then( vinculos => vinculos.forEach( function(vinculo){
-						 apendarNodo(vinculo.toLowerCase())
-						 apendarVinculo(d.id, vinculo.toLowerCase()) 
-						 }))
-						.then( update(grafo) )
-						.catch(err => console.log(err))
-						}
+			async function nodeclick(d){
+			  console.log(d.id);
+			  getPageHtml(decodeURI(d.id))
+				.then(html => getFirstParagraph( html ))
+				.then(paragraph => getWikiLinks( paragraph ))
+				.then( vinculos => vinculos.forEach( function(vinculo){
+					 apendarNodo(vinculo.toLowerCase())
+					 apendarVinculo(d.id, vinculo.toLowerCase()) 
+				 }))
+				.then( update(grafo) )
+				.catch(err => console.log(err))
 				
-const simulation = d3.forceSimulation()
-      .force("charge", d3.forceManyBody().strength(-1000))
-      .force("link", d3.forceLink().id(d => d.id).distance(100))
-      .force("x", d3.forceX())
-      .force("y", d3.forceY())
-      .force("center", d3.forceCenter(w / 2, h / 2))
-      .on("tick", ticked);
+				update(grafo)
+			}
+				
+			const simulation = d3.forceSimulation()
+				.force("charge", d3.forceManyBody().strength(-1000))
+				.force("link", d3.forceLink().id(d => d.id).distance(100))
+				.force("x", d3.forceX())
+				.force("y", d3.forceY())
+				.force("center", d3.forceCenter(w / 2, h / 2))
+				.on("tick", ticked);
 
-  let link = svg.append("g")
-      .attr("stroke", "#666")
-      .attr("stroke-width", 1.5)
-    .selectAll("line");
+			let link = svg.append("g")
+				.attr("stroke", "#666")
+				.attr("stroke-width", 1.5)
+				.selectAll("line");
 
   
-  let node = svg.append("g")
-        .selectAll("circle");
+  			let node = svg.append("g")
+        		.selectAll("circle");
 
-    let text = svg.append("g")     
-    .selectAll("text");
+		    let text = svg.append("g")     
+    			.selectAll("text");
 
 
   function ticked() {
@@ -202,10 +186,14 @@ const simulation = d3.forceSimulation()
     text.attr("x", d=>d.x)
     	.attr("y", d=>d.y + 40);
 
-    link.attr("x1", d => d.source.x)
+    /* link.attr("x1", d => d.source.x)
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
-        .attr("y2", d => d.target.y);
+        .attr("y2", d => d.target.y); */
+    link.attr("x1", function(d) { return d.source.x; })
+		 .attr("y1", function(d) { return d.source.y; })
+		 .attr("x2", function(d) { return d.target.x; })
+		 .attr("y2", function(d) { return d.target.y; });
   }
 
   // Terminate the force layout when this cell re-runs.
@@ -235,23 +223,23 @@ const simulation = d3.forceSimulation()
       		.data(nodes, d => d.id)
       		.join(enter => enter.append("text")
       			.attr("fill", "white")
-      			.attr("href", d => 'https://es.wikipedia.org/wiki/' + d.id + '"></a>')
+      			
       			.text(d => decodeURI(d.id)))
       				 .attr("class", "node")
 					    .attr("cursor", "pointer")
-					    .call(d3.drag()  //Define what to do on drag events
+				/*	    .call(d3.drag()  //Define what to do on drag events
 							.on("start", dragStarted)
 							.on("drag", dragging)
-							.on("end", dragEnded));   
+							.on("end", dragEnded));   */
 
 
       link = link
         .data(links, d => [d.source, d.target])
-        .join("line")
-         .call(d3.drag()  //Define what to do on drag events
+        .join("line");
+  /*       .call(d3.drag()  //Define what to do on drag events
 							.on("start", dragStarted)
 							.on("drag", dragging)
-							.on("end", dragEnded));   	
+							.on("end", dragEnded))   	*/
 
       simulation.nodes(nodes);
       simulation.force("link").links(links);
@@ -259,9 +247,9 @@ const simulation = d3.forceSimulation()
     
 
 
-	node.on("click", d => nodeclick(d));
+	node.on("click", function(d){ nodeclick(d); update(grafo)});
 	
-
+	text.on("click", d => window.open('https://es.wikipedia.org/wiki/' + d.id ));
 	node.on("dblclick",function(d){ console.log("https://es.wikipedia.org/wiki/" + d.id) });
 
  
