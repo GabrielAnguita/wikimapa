@@ -46,12 +46,12 @@ function getPageHtml(pageName) {
 Get a DOM object for the first body paragraph in page HTML.
 @param {HtmlElement} element - An HTML element as returned by `getPageHtml`
 */
-const getFirstParagraph = element =>
+function getFirstParagraph(element) {
   // First paragraph that isn't marked as "empty"...
-  Array.from(element.querySelectorAll('p:not(.mw-empty-elt)'))
+ return Array.from(element.querySelectorAll('p:not(.mw-empty-elt)'))
     // ...and isn't the "coordinates" container
     .find(p => !p.querySelector('#coordinates'));
-
+}
 /**
 Get the name of each Wikipedia article linked.
 @param {HtmlElement} element - An HTML element as returned by `getFirstParagraph`
